@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sales Bot Widget</title>
+    <style>
+        /* Widget Container */
+        #instabids-chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Chat Button */
+        #instabids-chat-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #4A90E2;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #instabids-chat-button:hover {
+            transform: scale(1.1);
+        }
+        
+        #instabids-chat-button svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+        }
+        
+        /* Chat Window */
+        #instabids-chat-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 380px;
+            height: 600px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        #instabids-chat-header {
+            background: #4A90E2;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #instabids-chat-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        #instabids-close-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        /* Messages Container */
+        #instabids-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        /* Message Bubbles */
+        .instabids-message {
+            margin-bottom: 16px;
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .instabids-message.bot {
+            justify-content: flex-start;
+        }
+        
+        .instabids-message.user {
+            justify-content: flex-end;
+        }
+        
+        .instabids-message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        
+        .instabids-message.bot .instabids-message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .instabids-message.user .instabids-message-content {
+            background: #4A90E2;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        /* Input Container */
+        #instabids-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+        
+        #instabids-message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 24px;
+            outline: none;
+            font-size: 16px;
+        }
+        
+        #instabids-send-button {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #4A90E2;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        #instabids-send-button:hover {
+            background: #3A80D2;
+        }
+        
+        #instabids-send-button svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+        
+        /* Typing Indicator */
+        .instabids-typing {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            width: fit-content;
+        }
+        
+        .instabids-typing span {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        
+        .instabids-typing span:nth-child(1) { animation-delay: 0s; }
+        .instabids-typing span:nth-child(2) { animation-delay: 0.2s; }
+        .instabids-typing span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 480px) {
+            #instabids-chat-window {
+                width: 100%;
+                height: 100%;
+                bottom: 0;
+                right: 0;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- This is the embeddable widget -->
+    <div id="instabids-chat-widget">
+        <!-- Chat Toggle Button -->
+        <button id="instabids-chat-button" onclick="instabidsToggleChat()">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L1 23l6.71-1.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.41 0-2.73-.36-3.88-.99l-.28-.15-2.9.85.85-2.9-.15-.28C4.36 14.73 4 13.41 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
+                <circle cx="8.5" cy="12" r="1"/>
+                <circle cx="12" cy="12" r="1"/>
+                <circle cx="15.5" cy="12" r="1"/>
+            </svg>
+        </button>
+        
+        <!-- Chat Window -->
+        <div id="instabids-chat-window">
+            <div id="instabids-chat-header">
+                <h3>Sales Assistant</h3>
+                <button id="instabids-close-button" onclick="instabidsToggleChat()">×</button>
+            </div>
+            
+            <div id="instabids-messages"></div>
+            
+            <div id="instabids-input-container">
+                <input 
+                    type="text" 
+                    id="instabids-message-input" 
+                    placeholder="Type your message..."
+                    onkeypress="if(event.key === 'Enter') instabidsSendMessage()"
+                />
+                <button id="instabids-send-button" onclick="instabidsSendMessage()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration - CHANGE THIS TO YOUR DEPLOYED BOT URL
+        const INSTABIDS_BOT_URL = window.INSTABIDS_BOT_URL || 'http://localhost:8000';
+        const INSTABIDS_SESSION_ID = 'web_' + Math.random().toString(36).substr(2, 9);
+        
+        // State
+        let instabidsIsOpen = false;
+        let instabidsIsTyping = false;
+        
+        // Toggle chat window
+        function instabidsToggleChat() {
+            instabidsIsOpen = !instabidsIsOpen;
+            const chatWindow = document.getElementById('instabids-chat-window');
+            chatWindow.style.display = instabidsIsOpen ? 'flex' : 'none';
+            
+            // Send initial message if opening for first time
+            if (instabidsIsOpen && document.getElementById('instabids-messages').children.length === 0) {
+                instabidsSendInitialMessage();
+            }
+        }
+        
+        // Send initial message to start conversation
+        async function instabidsSendInitialMessage() {
+            try {
+                const response = await fetch(`${INSTABIDS_BOT_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "start",
+                        thread_id: INSTABIDS_SESSION_ID
+                    })
+                });
+                
+                const data = await response.json();
+                instabidsAddMessage(data.response, 'bot');
+            } catch (error) {
+                console.error('Failed to start conversation:', error);
+                instabidsAddMessage("I'm having trouble connecting. Please try again later.", 'bot');
+            }
+        }
+        
+        // Send message
+        async function instabidsSendMessage() {
+            const input = document.getElementById('instabids-message-input');
+            const message = input.value.trim();
+            
+            if (!message || instabidsIsTyping) return;
+            
+            // Add user message
+            instabidsAddMessage(message, 'user');
+            input.value = '';
+            
+            // Show typing indicator
+            instabidsShowTyping();
+            
+            try {
+                const response = await fetch(`${INSTABIDS_BOT_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        thread_id: INSTABIDS_SESSION_ID
+                    })
+                });
+                
+                const data = await response.json();
+                instabidsHideTyping();
+                instabidsAddMessage(data.response, 'bot');
+                
+            } catch (error) {
+                console.error('Failed to send message:', error);
+                instabidsHideTyping();
+                instabidsAddMessage("I'm having trouble responding. Please try again.", 'bot');
+            }
+        }
+        
+        // Add message to chat
+        function instabidsAddMessage(text, sender) {
+            const messagesContainer = document.getElementById('instabids-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `instabids-message ${sender}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'instabids-message-content';
+            contentDiv.textContent = text;
+            
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Show typing indicator
+        function instabidsShowTyping() {
+            instabidsIsTyping = true;
+            const messagesContainer = document.getElementById('instabids-messages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'instabids-message bot';
+            typingDiv.id = 'instabids-typing-indicator';
+            
+            const typingContent = document.createElement('div');
+            typingContent.className = 'instabids-typing';
+            typingContent.innerHTML = '<span></span><span></span><span></span>';
+            
+            typingDiv.appendChild(typingContent);
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Hide typing indicator
+        function instabidsHideTyping() {
+            instabidsIsTyping = false;
+            const typingIndicator = document.getElementById('instabids-typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+    </script>
+</body>
+</html>
